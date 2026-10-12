@@ -237,7 +237,7 @@ async function commandExplain(args: Args): Promise<number> {
 const TEMPLATE = (preset: PresetName) => `import { defineConfig } from '4layers';
 
 export default defineConfig({
-  // strict | classic | relaxed — see https://github.com/lmilikich/4layers#presets
+  // strict | classic | relaxed — see https://github.com/lukamilikic/4layers#presets
   extends: '${preset}',
 
   // Files the checker looks at.

@@ -20,12 +20,12 @@
   "author": "Luka Milikic",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lmilikich/4layers.git"
+    "url": "git+https://github.com/lukamilikic/4layers.git"
   },
   "bugs": {
-    "url": "https://github.com/lmilikich/4layers/issues"
+    "url": "https://github.com/lukamilikic/4layers/issues"
   },
-  "homepage": "https://github.com/lmilikich/4layers#readme",
+  "homepage": "https://github.com/lukamilikic/4layers#readme",
   "type": "module",
   "sideEffects": false,
   "engines": {
