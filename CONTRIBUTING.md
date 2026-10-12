@@ -18,6 +18,25 @@ npm run build
 node dist/cli.js check --root test/fixtures/sample
 ```
 
+## README screenshot
+
+`docs/cli-output.png` in the README is rendered from the real CLI output. After
+changing the pretty output, regenerate it:
+
+```bash
+npm run build
+npm run docs:screenshot   # writes docs/cli-output.svg from the cli-visuals fixture
+```
+
+Then render `docs/cli-output.svg` to `docs/cli-output.png` at 2x, for example
+with a headless Chromium browser:
+
+```bash
+msedge --headless --force-device-scale-factor=2 --window-size=1202,518 --screenshot=docs/cli-output.png docs/cli-output.svg
+```
+
+The README uses the PNG because npm does not display SVG images from GitHub.
+
 ## Ground rules
 
 - **No runtime dependencies.** The scanner, matcher, resolver and CLI are

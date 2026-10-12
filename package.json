@@ -59,6 +59,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "docs:screenshot": "node scripts/render-cli-svg.mjs",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",

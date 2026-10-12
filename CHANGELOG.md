@@ -30,6 +30,8 @@ All notable changes to this project are documented here. The format follows
   number of imports made by the files of each layer.
 - Exports for custom reporters: `groupViolations`, `barCells`, `createStyle`,
   `detectStyle`, `defaultStyle`, `PLAIN_STYLE`.
+- README screenshot of the colored output, generated from the real CLI with
+  `npm run docs:screenshot`.
 
 ### Unchanged
 

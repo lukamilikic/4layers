@@ -36,6 +36,10 @@ A router has to reference its views; this is where that is legal.
 - **Convention over configuration** — the default preset already knows what
   `src/components`, `src/stores`, `src/domain` and `src/api` mean.
 
+<p align="center">
+  <img src="docs/cli-output.png" alt="4layers check --stats: a per-layer table with colored share bars, then violations grouped by layer edge, each with an underlined file location, the offending import and a fix hint" width="900">
+</p>
+
 ## Install
 
 ```bash
@@ -72,8 +76,8 @@ scanned.
 
 Violations are grouped by layer edge, so ten components calling the same API
 module show up as one block with ten locations. In a color terminal each layer
-has its own color and every `path:line:col` is underlined, so most editors and
-terminals make it clickable. With `NO_COLOR`, outside a TTY, or with a non
+has its own color and every `path:line:col` is underlined; terminals such as
+VS Code's open it on Ctrl+click. With `NO_COLOR`, outside a TTY, or with a non
 UTF-8 locale, the same report uses plain ASCII symbols (`x`, `->`, `#`).
 
 Add `--stats` for a per-layer overview, printed before the violations:
