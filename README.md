@@ -53,18 +53,42 @@ conventional Vue directory layout. By default only files under `src/` are
 scanned.
 
 ```
-src/api/cart.ts [infrastructure]
-  4:1  error  infrastructure may not import application ("@/stores/cart" resolves to src/stores/cart.ts).  layer-dependency
-         -> infrastructure may import: domain. Infrastructure should expose data and let application call it, not the other way round.
+4layers 0.1.1 · classic preset
 
-src/components/CartView.vue [presentation]
-  13:1  error  presentation may not import infrastructure ("@/api/cart" resolves to src/api/cart.ts).  layer-dependency
-         -> presentation may import: application, domain. Put the call in an application-layer store or composable and let the component consume that.
-  15:1  error  The presentation layer may not import "axios".  package-boundary
-         -> Move "axios" behind the application layer so the component only talks to state and use cases.
+ ✖ infrastructure → application  layer-dependency
+     src/api/cart.ts:4:1   '@/stores/cart'
+     fix  infrastructure may import: domain. Infrastructure should expose data and let application call it, not the other way round.
 
-3 errors · 42 files, 118 imports in 31ms
+ ✖ presentation → infrastructure  layer-dependency
+     src/components/CartView.vue:13:1   '@/api/cart'
+     fix  presentation may import: application, domain. Put the call in an application-layer store or composable and let the component consume that.
+
+ ✖ presentation → axios  package-boundary
+     src/components/CartView.vue:15:1   'axios'
+     fix  Move "axios" behind the application layer so the component only talks to state and use cases.
+
+ ✖ 3 errors · 0 warnings · 7 files · 13 imports · 24ms
 ```
+
+Violations are grouped by layer edge, so ten components calling the same API
+module show up as one block with ten locations. In a color terminal each layer
+has its own color and every `path:line:col` is underlined, so most editors and
+terminals make it clickable. With `NO_COLOR`, outside a TTY, or with a non
+UTF-8 locale, the same report uses plain ASCII symbols (`x`, `->`, `#`).
+
+Add `--stats` for a per-layer overview, printed before the violations:
+
+```
+ LAYER           FILES  IMPORTS  SHARE             VIOLATIONS
+ ────────────────────────────────────────────────────────────
+ presentation        2        6  ████████████████  2
+ application         1        2  ██████░░░░░░░░░░  0
+ domain              1        0  ░░░░░░░░░░░░░░░░  0
+ infrastructure      1        2  ██████░░░░░░░░░░  1
+ composition         2        3  ████████░░░░░░░░  0
+```
+
+SHARE compares the imports each layer makes, scaled to the busiest one.
 
 Write a config when your layout differs:
 
@@ -315,7 +339,7 @@ flowchart TD
 --preset <name>      strict | classic | relaxed (overrides config)
 --format <name>      pretty | compact | json | github | mermaid | dot
 --max-warnings <n>   Fail when warnings exceed n
---stats              Print the per-layer table
+--stats              Print the per-layer table before the report
 --quiet              Only print the summary
 --no-hints           Hide the "how to fix" hints
 ```

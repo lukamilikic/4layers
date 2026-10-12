@@ -2,23 +2,33 @@
  * Reporters. No color dependency: the ANSI codes are inlined and disabled
  * automatically when the output is not a TTY, when `NO_COLOR` is set, or when
  * the format is machine-readable.
+ *
+ * The human-readable formatters (`formatPretty`, `formatSummary`,
+ * `formatLayerTable`) take an optional `Style`, so tests can render them with
+ * colors and unicode symbols on or off regardless of the test terminal.
  */
 
+import { defaultStyle, type Paint, type Style } from './style.js';
 import type { CheckResult, Violation } from './types.js';
 
 export type ReportFormat = 'pretty' | 'compact' | 'json' | 'github' | 'mermaid' | 'dot';
+
+export type { Style } from './style.js';
 
 const supportsColor =
   process.env.NO_COLOR === undefined &&
   process.env.TERM !== 'dumb' &&
   Boolean(process.stdout.isTTY);
 
-type Paint = (text: string) => string;
-
 function ansi(open: number, close = 39): Paint {
   return (text: string) => (supportsColor ? `\u001B[${open}m${text}\u001B[${close}m` : text);
 }
 
+/**
+ * Basic 16-color painters, used by the CLI's own messages, the Vite plugin and
+ * the compact format. Their codes are part of the compact output, so they stay
+ * as they are.
+ */
 export const paint = {
   bold: ansi(1, 22),
   dim: ansi(2, 22),
@@ -31,48 +41,140 @@ export const paint = {
   gray: ansi(90),
 };
 
-const LAYER_COLORS: Record<string, Paint> = {
-  presentation: paint.magenta,
-  application: paint.blue,
-  domain: paint.green,
-  infrastructure: paint.yellow,
-};
-
 /** Colorise a layer name consistently across every report. */
-export function paintLayer(layer: string | null): string {
-  if (!layer) return paint.gray('unassigned');
-  return (LAYER_COLORS[layer] ?? paint.cyan)(layer);
+export function paintLayer(layer: string | null, style: Style = defaultStyle()): string {
+  if (!layer) return style.color('dim')('unassigned');
+  return style.layer(layer);
 }
 
 function pluralise(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
-/** Human-readable report, grouped by file. */
-export function formatPretty(result: CheckResult): string {
-  const lines: string[] = [];
-  const byFile = new Map<string, Violation[]>();
-  for (const violation of result.violations) {
-    const list = byFile.get(violation.file);
-    if (list) list.push(violation);
-    else byFile.set(violation.file, [violation]);
-  }
+/** Violations that share an edge: same source layer, same target, same rule. */
+export interface ViolationGroup {
+  fromLayer: string | null;
+  /** Target layer, package name, or missing layer name; null when there is none. */
+  target: string | null;
+  rule: Violation['rule'];
+  severity: Violation['severity'];
+  violations: Violation[];
+}
 
-  for (const [file, violations] of byFile) {
-    const layer = violations[0]?.fromLayer ?? null;
-    lines.push(`${paint.bold(file)} ${paint.gray(`[${layer ?? 'unassigned'}]`)}`);
-    for (const violation of violations) {
-      const badge =
-        violation.severity === 'error' ? paint.red('error') : paint.yellow('warn ');
-      const position = paint.gray(`${violation.line}:${violation.column}`);
-      lines.push(`  ${position}  ${badge}  ${violation.message}  ${paint.gray(violation.rule)}`);
-      if (violation.hint) lines.push(`         ${paint.gray('-> ' + violation.hint)}`);
+function groupTarget(violation: Violation): string | null {
+  if (violation.packageName) return violation.packageName;
+  if (violation.toLayer) return violation.toLayer;
+  if (violation.rule === 'unknown-layer') return violation.specifier || null;
+  return null;
+}
+
+/**
+ * Group violations by (fromLayer, target, rule), keeping the order in which
+ * each group first appears. Within a group, violations are sorted by file,
+ * line and column.
+ */
+export function groupViolations(violations: Violation[]): ViolationGroup[] {
+  const groups = new Map<string, ViolationGroup>();
+  for (const violation of violations) {
+    const target = groupTarget(violation);
+    const key = `${violation.fromLayer ?? ''}\u0000${target ?? ''}\u0000${violation.rule}`;
+    const group = groups.get(key);
+    if (group) {
+      group.violations.push(violation);
+      if (violation.severity === 'error') group.severity = 'error';
+      continue;
     }
-    lines.push('');
+    groups.set(key, {
+      fromLayer: violation.fromLayer,
+      target,
+      rule: violation.rule,
+      severity: violation.severity,
+      violations: [violation],
+    });
   }
 
-  lines.push(formatSummary(result));
-  return lines.join('\n');
+  for (const group of groups.values()) {
+    group.violations.sort(
+      (a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.column - b.column,
+    );
+  }
+  return [...groups.values()];
+}
+
+/** `presentation → infrastructure`, `presentation → axios`, or '' for none. */
+function edgeLabel(group: ViolationGroup, style: Style): string {
+  const dim = style.color('dim');
+  const arrow = dim(style.symbols.arrow);
+  const first = group.violations[0] as Violation;
+
+  if (!group.fromLayer && !group.target) return '';
+
+  const from = group.fromLayer ? style.layer(group.fromLayer) : dim('unassigned');
+  if (first.packageName) return `${from} ${arrow} ${first.packageName}`;
+  if (first.toLayer) return `${from} ${arrow} ${style.layer(first.toLayer)}`;
+  if (group.rule === 'unknown-layer' && group.target) return `${from} ${arrow} ${group.target}`;
+  if (group.rule === 'unresolved-import') return `${from} ${arrow} ${dim('unresolved')}`;
+  return from;
+}
+
+function renderGroup(group: ViolationGroup, style: Style): string[] {
+  const severityColor = style.color(group.severity === 'error' ? 'error' : 'warn');
+  const symbol = severityColor(
+    group.severity === 'error' ? style.symbols.error : style.symbols.warn,
+  );
+  const label = edgeLabel(group, style);
+  const header = label
+    ? ` ${symbol} ${label}  ${style.color('dim')(group.rule)}`
+    : ` ${symbol} ${group.rule}`;
+
+  const locations = group.violations.map((v) => `${v.file}:${v.line}:${v.column}`);
+  const width = Math.max(...locations.map((location) => location.length));
+
+  const lines = [header];
+  group.violations.forEach((violation, i) => {
+    const location = locations[i] as string;
+    const row = `     ${style.underline(location)}`;
+    if (!violation.specifier) {
+      lines.push(row);
+      return;
+    }
+    const gap = ' '.repeat(width - location.length + 3);
+    lines.push(`${row}${gap}${severityColor(`'${violation.specifier}'`)}`);
+  });
+
+  // One fix line per distinct hint, so an edge repeated across files is not
+  // followed by the same advice over and over.
+  const hints = [...new Set(group.violations.map((v) => v.hint).filter(Boolean))] as string[];
+  for (const hint of hints) {
+    lines.push(`     ${style.color('dim')('fix')}  ${hint}`);
+  }
+  return lines;
+}
+
+/** Human-readable report, grouped by layer edge. */
+export function formatPretty(result: CheckResult, style: Style = defaultStyle()): string {
+  const blocks = groupViolations(result.violations).map((group) =>
+    renderGroup(group, style).join('\n'),
+  );
+  blocks.push(formatSummary(result, style));
+  return blocks.join('\n\n');
+}
+
+/** The compact format's summary line, kept exactly as it was before 0.1.1. */
+function formatCompactSummary(result: CheckResult): string {
+  const { errorCount, warningCount, stats } = result;
+  const scanned = paint.gray(
+    `· ${pluralise(stats.filesScanned, 'file')}, ${pluralise(stats.importsScanned, 'import')} in ${stats.durationMs}ms`,
+  );
+
+  if (errorCount === 0 && warningCount === 0) {
+    return `${paint.green('All layers respected.')} ${scanned}`;
+  }
+
+  const parts: string[] = [];
+  if (errorCount) parts.push(paint.red(pluralise(errorCount, 'error')));
+  if (warningCount) parts.push(paint.yellow(pluralise(warningCount, 'warning')));
+  return `${paint.bold(parts.join(', '))} ${scanned}`;
 }
 
 /** One line per violation, easy to grep and to click in a terminal. */
@@ -81,7 +183,7 @@ export function formatCompact(result: CheckResult): string {
     (violation) =>
       `${violation.file}:${violation.line}:${violation.column}: ${violation.severity}: ${violation.message} (${violation.rule})`,
   );
-  lines.push(formatSummary(result));
+  lines.push(formatCompactSummary(result));
   return lines.join('\n');
 }
 
@@ -184,44 +286,98 @@ function id(name: string): string {
   return name.replace(/[^A-Za-z0-9_]/g, '_');
 }
 
-/** The trailing summary line shared by the text reporters. */
-export function formatSummary(result: CheckResult): string {
+/** The trailing summary line of the pretty report. */
+export function formatSummary(result: CheckResult, style: Style = defaultStyle()): string {
   const { errorCount, warningCount, stats } = result;
-  const scanned = paint.gray(
-    `· ${pluralise(stats.filesScanned, 'file')}, ${pluralise(stats.importsScanned, 'import')} in ${stats.durationMs}ms`,
-  );
+  const dim = style.color('dim');
+  const scanned = [
+    pluralise(stats.filesScanned, 'file'),
+    pluralise(stats.importsScanned, 'import'),
+    `${stats.durationMs}ms`,
+  ].join(' · ');
 
   if (errorCount === 0 && warningCount === 0) {
-    return `${paint.green('All layers respected.')} ${scanned}`;
+    return ` ${style.color('ok')(style.symbols.ok)} All layers respected ${dim(`· ${scanned}`)}`;
   }
 
-  const parts: string[] = [];
-  if (errorCount) parts.push(paint.red(pluralise(errorCount, 'error')));
-  if (warningCount) parts.push(paint.yellow(pluralise(warningCount, 'warning')));
-  return `${paint.bold(parts.join(', '))} ${scanned}`;
+  const symbol =
+    errorCount > 0
+      ? style.color('error')(style.symbols.error)
+      : style.color('warn')(style.symbols.warn);
+  const errors = pluralise(errorCount, 'error');
+  const warnings = pluralise(warningCount, 'warning');
+  return [
+    ` ${symbol} ${errorCount > 0 ? style.color('error')(errors) : dim(errors)}`,
+    warningCount > 0 ? style.color('warn')(warnings) : dim(warnings),
+    dim(scanned),
+  ].join(dim(' · '));
 }
 
-/** A compact per-layer table, printed by `4layers check --stats`. */
-export function formatLayerTable(result: CheckResult): string {
-  const rows = result.config.layerNames.map((name) => {
-    const layer = result.config.layers[name]!;
-    const count = result.stats.filesByLayer[name] ?? 0;
-    const allowed = layer.canImport.length ? layer.canImport.join(', ') : '(nothing)';
-    return [name, String(count), allowed];
-  });
-  const headers = ['layer', 'files', 'may import'];
-  const widths = headers.map((header, i) =>
-    Math.max(header.length, ...rows.map((row) => (row[i] as string).length)),
-  );
-  const line = (cells: string[], painter: Paint = (text) => text): string =>
-    cells
-      .map((cell, i) => painter(i === cells.length - 1 ? cell : cell.padEnd(widths[i] as number)))
-      .join('  ');
+/** Width of the SHARE bar in the `--stats` table. */
+export const BAR_CELLS = 16;
+
+/**
+ * Filled cells for one bar, scaled to the largest value. Rounded up, so any
+ * non-zero value shows at least one cell.
+ */
+export function barCells(value: number, max: number, cells: number = BAR_CELLS): number {
+  if (value <= 0 || max <= 0) return 0;
+  return Math.min(cells, Math.ceil((value / max) * cells));
+}
+
+/** The per-layer table, printed by `4layers check --stats`. */
+export function formatLayerTable(result: CheckResult, style: Style = defaultStyle()): string {
+  const dim = style.color('dim');
+  const importsByLayer = result.stats.importsByLayer ?? {};
+  const violationsByLayer: Record<string, number> = {};
+  for (const violation of result.violations) {
+    if (!violation.fromLayer) continue;
+    violationsByLayer[violation.fromLayer] = (violationsByLayer[violation.fromLayer] ?? 0) + 1;
+  }
+
+  const rows = result.config.layerNames.map((name) => ({
+    name,
+    files: result.stats.filesByLayer[name] ?? 0,
+    imports: importsByLayer[name] ?? 0,
+    violations: violationsByLayer[name] ?? 0,
+  }));
+  const maxImports = Math.max(0, ...rows.map((row) => row.imports));
+
+  const nameWidth = Math.max('LAYER'.length, ...rows.map((row) => row.name.length));
+  const filesWidth = Math.max('FILES'.length, ...rows.map((row) => String(row.files).length));
+  const importsWidth = Math.max('IMPORTS'.length, ...rows.map((row) => String(row.imports).length));
+
+  const headerCells = [
+    'LAYER'.padEnd(nameWidth),
+    'FILES'.padStart(filesWidth),
+    'IMPORTS'.padStart(importsWidth),
+    'SHARE'.padEnd(BAR_CELLS),
+    'VIOLATIONS',
+  ];
+  const header = headerCells.join('  ');
+  const lines = [` ${dim(header)}`, ` ${dim(style.symbols.rule.repeat(header.length))}`];
+
+  for (const row of rows) {
+    const filled = barCells(row.imports, maxImports);
+    const bar =
+      style.layer(row.name, style.symbols.barFull.repeat(filled)) +
+      dim(style.symbols.barEmpty.repeat(BAR_CELLS - filled));
+    const violations = String(row.violations);
+    lines.push(
+      ' ' +
+        [
+          style.layer(row.name, row.name.padEnd(nameWidth)),
+          String(row.files).padStart(filesWidth),
+          String(row.imports).padStart(importsWidth),
+          bar,
+          row.violations > 0 ? style.color('error')(violations) : dim(violations),
+        ].join('  '),
+    );
+  }
 
   const unassigned = Object.values(result.files).filter((layer) => layer === null).length;
-  const out = [line(headers, paint.bold), ...rows.map((row) => line(row))];
-  if (unassigned > 0) out.push(paint.gray(`${pluralise(unassigned, 'file')} in no layer`));
-  return out.join('\n');
+  if (unassigned > 0) lines.push(` ${dim(`${pluralise(unassigned, 'file')} in no layer`)}`);
+  return lines.join('\n');
 }
 
 export function format(result: CheckResult, formatName: ReportFormat): string {

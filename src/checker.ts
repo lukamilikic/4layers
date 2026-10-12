@@ -239,9 +239,13 @@ export function createChecker(config: ResolvedConfig): Checker {
     const fileLayers: Record<string, string | null> = {};
     const edgeCounts = new Map<string, LayerEdge>();
     const filesByLayer: Record<string, number> = {};
+    const importsByLayer: Record<string, number> = {};
     let importsScanned = 0;
 
-    for (const name of config.layerNames) filesByLayer[name] = 0;
+    for (const name of config.layerNames) {
+      filesByLayer[name] = 0;
+      importsByLayer[name] = 0;
+    }
 
     for (const file of files) {
       const relative = relativise(file);
@@ -256,7 +260,10 @@ export function createChecker(config: ResolvedConfig): Checker {
       const analysis = analyse(relative, code);
       const fromLayer = analysis.fromLayer;
       fileLayers[relative] = fromLayer;
-      if (fromLayer) filesByLayer[fromLayer] = (filesByLayer[fromLayer] ?? 0) + 1;
+      if (fromLayer) {
+        filesByLayer[fromLayer] = (filesByLayer[fromLayer] ?? 0) + 1;
+        importsByLayer[fromLayer] = (importsByLayer[fromLayer] ?? 0) + analysis.importCount;
+      }
       importsScanned += analysis.importCount;
       violations.push(...analysis.violations);
 
@@ -286,6 +293,8 @@ export function createChecker(config: ResolvedConfig): Checker {
         importsScanned,
         filesByLayer,
         durationMs: Date.now() - started,
+        // Added in 0.1.1, last so existing JSON keeps its field order.
+        importsByLayer,
       },
       config,
     };

@@ -1,0 +1,218 @@
+{
+  "ok": false,
+  "errorCount": 5,
+  "warningCount": 0,
+  "violations": [
+    {
+      "rule": "layer-dependency",
+      "message": "infrastructure may not import application (\"@/stores/cart\" resolves to src/stores/cart.ts).",
+      "file": "src/api/cart.ts",
+      "line": 4,
+      "column": 1,
+      "specifier": "@/stores/cart",
+      "fromLayer": "infrastructure",
+      "toLayer": "application",
+      "typeOnly": false,
+      "hint": "infrastructure may import: domain. Infrastructure should expose data and let application call it, not the other way round.",
+      "severity": "error"
+    },
+    {
+      "rule": "layer-dependency",
+      "message": "presentation may not import infrastructure (\"@/api/cart\" resolves to src/api/cart.ts).",
+      "file": "src/components/CartView.vue",
+      "line": 13,
+      "column": 1,
+      "specifier": "@/api/cart",
+      "fromLayer": "presentation",
+      "toLayer": "infrastructure",
+      "typeOnly": false,
+      "hint": "presentation may import: application, domain. Put the call in an application-layer store or composable and let the component consume that.",
+      "severity": "error"
+    },
+    {
+      "rule": "package-boundary",
+      "message": "The presentation layer may not import \"axios\".",
+      "file": "src/components/CartView.vue",
+      "line": 15,
+      "column": 1,
+      "specifier": "axios",
+      "fromLayer": "presentation",
+      "toLayer": null,
+      "packageName": "axios",
+      "typeOnly": false,
+      "hint": "Move \"axios\" behind the application layer so the component only talks to state and use cases.",
+      "severity": "error"
+    },
+    {
+      "rule": "package-boundary",
+      "message": "The domain layer may not import \"vue\".",
+      "file": "src/domain/order.ts",
+      "line": 2,
+      "column": 1,
+      "specifier": "vue",
+      "fromLayer": "domain",
+      "toLayer": null,
+      "packageName": "vue",
+      "typeOnly": false,
+      "hint": "Keep the domain framework-agnostic: wrap \"vue\" in an infrastructure adapter and depend on a domain port instead.",
+      "severity": "error"
+    },
+    {
+      "rule": "layer-dependency",
+      "message": "domain may not import infrastructure (\"@/api/cart\" resolves to src/api/cart.ts).",
+      "file": "src/domain/order.ts",
+      "line": 3,
+      "column": 1,
+      "specifier": "@/api/cart",
+      "fromLayer": "domain",
+      "toLayer": "infrastructure",
+      "typeOnly": false,
+      "hint": "domain may not import any other layer. Invert the dependency: declare a port (interface) in the domain and implement it in infrastructure.",
+      "severity": "error"
+    }
+  ],
+  "edges": [
+    {
+      "from": "application",
+      "to": "infrastructure",
+      "count": 1,
+      "allowed": true
+    },
+    {
+      "from": "application",
+      "to": "domain",
+      "count": 1,
+      "allowed": true
+    },
+    {
+      "from": "composition",
+      "to": "application",
+      "count": 1,
+      "allowed": true
+    },
+    {
+      "from": "composition",
+      "to": "presentation",
+      "count": 1,
+      "allowed": true
+    },
+    {
+      "from": "domain",
+      "to": "infrastructure",
+      "count": 1,
+      "allowed": false
+    },
+    {
+      "from": "infrastructure",
+      "to": "domain",
+      "count": 1,
+      "allowed": true
+    },
+    {
+      "from": "infrastructure",
+      "to": "application",
+      "count": 1,
+      "allowed": false
+    },
+    {
+      "from": "presentation",
+      "to": "application",
+      "count": 1,
+      "allowed": true
+    },
+    {
+      "from": "presentation",
+      "to": "domain",
+      "count": 1,
+      "allowed": true
+    },
+    {
+      "from": "presentation",
+      "to": "infrastructure",
+      "count": 1,
+      "allowed": false
+    }
+  ],
+  "stats": {
+    "filesScanned": 7,
+    "importsScanned": 13,
+    "filesByLayer": {
+      "presentation": 1,
+      "application": 1,
+      "domain": 2,
+      "infrastructure": 1,
+      "composition": 1
+    },
+    "durationMs": 0
+  },
+  "layers": {
+    "presentation": {
+      "canImport": [
+        "application",
+        "domain"
+      ],
+      "files": [
+        "src/components/**",
+        "src/views/**",
+        "src/pages/**",
+        "src/layouts/**",
+        "src/ui/**",
+        "src/presentation/**",
+        "**/*.vue"
+      ]
+    },
+    "application": {
+      "canImport": [
+        "domain",
+        "infrastructure"
+      ],
+      "files": [
+        "src/application/**",
+        "src/stores/**",
+        "src/store/**",
+        "src/composables/**",
+        "src/queries/**",
+        "src/mutations/**",
+        "src/app/**"
+      ]
+    },
+    "domain": {
+      "canImport": [],
+      "files": [
+        "src/domain/**",
+        "src/entities/**",
+        "src/models/**",
+        "src/use-cases/**",
+        "src/usecases/**"
+      ]
+    },
+    "infrastructure": {
+      "canImport": [
+        "domain"
+      ],
+      "files": [
+        "src/infrastructure/**",
+        "src/infra/**",
+        "src/api/**",
+        "src/http/**",
+        "src/services/**",
+        "src/repositories/**",
+        "src/adapters/**",
+        "src/storage/**",
+        "src/gateways/**"
+      ]
+    },
+    "composition": {
+      "canImport": [
+        "*"
+      ],
+      "files": [
+        "src/router/**",
+        "src/routes/**",
+        "src/main.{ts,js,mts,mjs}",
+        "src/bootstrap/**",
+        "src/composition/**"
+      ]
+    }
+  }
+}

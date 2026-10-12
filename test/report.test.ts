@@ -14,6 +14,7 @@ import {
   formatMermaid,
   formatPretty,
 } from '../src/report.js';
+import { PLAIN_STYLE } from '../src/style.js';
 import type { CheckResult } from '../src/types.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -26,12 +27,12 @@ beforeAll(async () => {
 });
 
 describe('formatPretty', () => {
-  it('groups violations by file and includes hints', () => {
-    const output = formatPretty(result);
-    expect(output).toContain('src/components/CartView.vue');
-    expect(output).toContain('presentation may not import infrastructure');
-    expect(output).toMatch(/->.*application-layer store/);
-    expect(output).toContain('5 errors');
+  it('groups violations by layer edge and includes fix hints', () => {
+    const output = formatPretty(result, PLAIN_STYLE);
+    expect(output).toContain(' x presentation -> infrastructure  layer-dependency');
+    expect(output).toContain("src/components/CartView.vue:13:1   '@/api/cart'");
+    expect(output).toMatch(/ {5}fix {2}.*application-layer store/);
+    expect(output).toContain(' x 5 errors · 0 warnings');
   });
 });
 
@@ -87,10 +88,10 @@ describe('formatDot', () => {
 });
 
 describe('formatLayerTable', () => {
-  it('lists every layer with its file count and allowances', () => {
-    const output = formatLayerTable(result);
-    expect(output).toMatch(/layer\s+files\s+may import/);
-    expect(output).toMatch(/domain\s+2\s+\(nothing\)/);
+  it('lists every layer with files, imports, share and violations', () => {
+    const output = formatLayerTable(result, PLAIN_STYLE);
+    expect(output).toMatch(/^ LAYER +FILES {2}IMPORTS {2}SHARE +VIOLATIONS$/m);
+    expect(output).toMatch(/^ domain +2 +\d+ {2}[#.]{16} {2}2$/m);
     expect(output).toContain('1 file in no layer');
   });
 });
