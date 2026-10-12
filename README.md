@@ -23,6 +23,11 @@ in a repository, and the boundaries quietly stop existing.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+Around them sits a fifth, small **composition** layer: the router and the app
+entry point (`src/router/**`, `src/main.ts`). That is where the layers get
+wired together, so it may import all of them, and nothing may import it back.
+A router has to reference its views; this is where that is legal.
+
 - **Vite plugin** — a forbidden import fails the build, and shows up in the dev
   overlay the moment you save.
 - **CLI** — `4layers check` for CI, with GitHub annotations and JSON output.
@@ -44,7 +49,8 @@ npx 4layers check
 ```
 
 That is already useful with no config at all: the `classic` preset plus the
-conventional Vue directory layout.
+conventional Vue directory layout. By default only files under `src/` are
+scanned.
 
 ```
 src/api/cart.ts [infrastructure]
@@ -103,9 +109,10 @@ Defaults from the built-in presets:
 | Layer            | Default globs                                                                                                |
 | ---------------- | ------------------------------------------------------------------------------------------------------------ |
 | `presentation`   | `src/components/**`, `src/views/**`, `src/pages/**`, `src/layouts/**`, `src/ui/**`, `src/presentation/**`, `**/*.vue` |
-| `application`    | `src/application/**`, `src/stores/**`, `src/composables/**`, `src/queries/**`, `src/mutations/**`, `src/router/**`, `src/app/**` |
+| `application`    | `src/application/**`, `src/stores/**`, `src/store/**`, `src/composables/**`, `src/queries/**`, `src/mutations/**`, `src/app/**` |
 | `domain`         | `src/domain/**`, `src/entities/**`, `src/models/**`, `src/use-cases/**`, `src/usecases/**`                    |
 | `infrastructure` | `src/infrastructure/**`, `src/infra/**`, `src/api/**`, `src/http/**`, `src/services/**`, `src/repositories/**`, `src/adapters/**`, `src/storage/**`, `src/gateways/**` |
+| `composition`    | `src/router/**`, `src/routes/**`, `src/main.{ts,js,mts,mjs}`, `src/bootstrap/**`, `src/composition/**` — may import every layer |
 
 Not sure where a file landed? Ask:
 

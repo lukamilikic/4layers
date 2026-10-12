@@ -88,6 +88,26 @@ describe('fourLayers vite plugin', () => {
     ).resolves.toBeDefined();
   });
 
+  it('reports each violation once in a build, not again per module', async () => {
+    const plugin = fourLayers({ build: 'warn' });
+    const warnings: string[] = [];
+    await build({
+      ...viteConfig(plugin),
+      logLevel: 'warn',
+      customLogger: {
+        info: () => {},
+        warn: (message: string) => warnings.push(message),
+        warnOnce: (message: string) => warnings.push(message),
+        error: () => {},
+        clearScreen: () => {},
+        hasErrorLogged: () => false,
+        hasWarned: false,
+      },
+    });
+    const reports = warnings.filter((message) => message.includes('BadWidget.ts'));
+    expect(reports).toHaveLength(1);
+  });
+
   it('skips checking entirely when build is "off"', async () => {
     await expect(build(viteConfig(fourLayers({ build: 'off' })))).resolves.toBeDefined();
   });

@@ -6,6 +6,10 @@
  *
  *   presentation -> application -> domain <- infrastructure
  *
+ * plus a fifth, `composition`: the router and the app entry point. That is
+ * where the layers get wired together, so it may import any of them, and no
+ * layer may import it back.
+ *
  * They differ in how much they let through:
  *
  * - `strict`   every edge the textbook forbids is an error, the domain layer
@@ -102,10 +106,10 @@ export const DEFAULT_LAYER_FILES: Record<string, string[]> = {
   application: [
     'src/application/**',
     'src/stores/**',
+    'src/store/**',
     'src/composables/**',
     'src/queries/**',
     'src/mutations/**',
-    'src/router/**',
     'src/app/**',
   ],
   domain: [
@@ -126,6 +130,13 @@ export const DEFAULT_LAYER_FILES: Record<string, string[]> = {
     'src/storage/**',
     'src/gateways/**',
   ],
+  composition: [
+    'src/router/**',
+    'src/routes/**',
+    'src/main.{ts,js,mts,mjs}',
+    'src/bootstrap/**',
+    'src/composition/**',
+  ],
 };
 
 const DESCRIPTIONS: Record<string, string> = {
@@ -137,6 +148,8 @@ const DESCRIPTIONS: Record<string, string> = {
     'Framework-agnostic business rules, entities and use cases. Depends on nothing.',
   infrastructure:
     'External world: HTTP, storage, SDKs, edge functions. Implements domain ports.',
+  composition:
+    'Composition root: router and app entry. Wires every layer together; nothing imports it.',
 };
 
 export interface Preset {
@@ -175,6 +188,9 @@ const CLASSIC: Preset = {
       canImport: ['domain'],
       packages: { deny: [...UI_PACKAGES, ...STATE_PACKAGES] },
     }),
+    composition: withFiles('composition', {
+      canImport: ['*'],
+    }),
   },
   severity: {
     'layer-dependency': 'error',
@@ -209,6 +225,9 @@ const STRICT: Preset = {
       canImport: ['domain'],
       packages: { deny: [...UI_PACKAGES, ...STATE_PACKAGES] },
     }),
+    composition: withFiles('composition', {
+      canImport: ['*'],
+    }),
   },
   severity: {
     'layer-dependency': 'error',
@@ -240,6 +259,9 @@ const RELAXED: Preset = {
       canImport: ['domain'],
       packages: { deny: UI_PACKAGES },
     }),
+    composition: withFiles('composition', {
+      canImport: ['*'],
+    }),
   },
   severity: {
     'layer-dependency': 'warn',
@@ -259,8 +281,11 @@ export const presets: Record<PresetName, Preset> = {
 
 export const DEFAULT_PRESET: PresetName = 'classic';
 
-/** Files scanned when the user does not narrow it down. */
-export const DEFAULT_INCLUDE = ['**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,vue}'];
+/**
+ * Files scanned when the user does not narrow it down. Only `src/`, so root
+ * config files (vite.config.ts, .eslintrc.js) are not reported as layerless.
+ */
+export const DEFAULT_INCLUDE = ['src/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,vue}'];
 
 /** Never scanned, whatever `include` says. */
 export const DEFAULT_EXCLUDE = [

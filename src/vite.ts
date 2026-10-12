@@ -84,6 +84,9 @@ export function fourLayers(options: FourLayersPluginOptions = {}): Plugin {
   let checker: Checker | null = null;
   let root = process.cwd();
   let isBuild = false;
+  // Set once a whole-project scan has reported everything, so per-module
+  // transforms do not report the same violations a second time.
+  let fullScanDone = false;
 
   return {
     name: PLUGIN_NAME,
@@ -113,6 +116,8 @@ export function fourLayers(options: FourLayersPluginOptions = {}): Plugin {
       if (!fullScan) return;
 
       const result = checker.checkProject();
+      // Builds are one-shot; in dev, edits after startup still need checking.
+      fullScanDone = isBuild;
       for (const violation of result.violations) {
         this.warn(describe(violation));
       }
@@ -135,7 +140,7 @@ export function fourLayers(options: FourLayersPluginOptions = {}): Plugin {
 
     transform(code, id) {
       const mode = isBuild ? buildMode : devMode;
-      if (!checker || mode === 'off') return null;
+      if (!checker || mode === 'off' || fullScanDone) return null;
       if (id.includes('\0') || id.includes('node_modules')) return null;
 
       const file = id.split('?')[0] as string;

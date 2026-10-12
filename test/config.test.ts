@@ -53,7 +53,9 @@ describe('resolveConfig', () => {
       'application',
       'domain',
       'infrastructure',
+      'composition',
     ]);
+    expect(config.layers.composition?.canImport).toEqual(['*']);
     expect(config.layers.domain?.canImport).toEqual([]);
     expect(config.severity['layer-dependency']).toBe('error');
     expect(config.typeOnlyImports).toBe('check');

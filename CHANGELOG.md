@@ -6,6 +6,25 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `composition` layer in every preset for the router and app entry
+  (`src/router/**`, `src/main.*`). It may import every layer; nothing may
+  import it. Importing it gets a `useRouter()` hint.
+- `src/store/**` (singular) is recognised as the application layer.
+
+### Changed
+
+- `src/router/**` moved from `application` to `composition`, so a router
+  lazy-loading views is no longer reported.
+- The default `include` scans `src/` only, so root config files are no longer
+  listed as belonging to no layer.
+
+### Fixed
+
+- The Vite plugin reported every violation twice during `vite build`: once
+  from the startup scan and again per module.
+
 ## [0.1.0] - 2026-10-12
 
 ### Added

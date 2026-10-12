@@ -326,6 +326,9 @@ function layerHint(config: ResolvedConfig, from: string, to: string): string {
     ? `${from} may import: ${allowed.join(', ')}.`
     : `${from} may not import any other layer.`;
 
+  if (to === 'composition') {
+    return `Nothing may import the composition root (router, app entry). Use useRouter()/useRoute() or provide/inject instead of importing the router instance.`;
+  }
   if (from === 'presentation' && to === 'infrastructure') {
     return `${allowedText} Put the call in an application-layer store or composable and let the component consume that.`;
   }

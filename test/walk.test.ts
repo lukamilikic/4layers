@@ -21,6 +21,7 @@ describe('walkProject', () => {
       'src/components/CartView.vue',
       'src/domain/order.ts',
       'src/domain/pricing.ts',
+      'src/router/index.ts',
       'src/stores/cart.ts',
       'src/utils/noise.ts',
     ]);

@@ -14,7 +14,8 @@ export type CanonicalLayer =
   | 'presentation'
   | 'application'
   | 'domain'
-  | 'infrastructure';
+  | 'infrastructure'
+  | 'composition';
 
 /** Built-in rule presets. */
 export type PresetName = 'strict' | 'classic' | 'relaxed';

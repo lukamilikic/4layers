@@ -64,7 +64,7 @@ describe('check (classic preset)', () => {
 
   it('collects stats', async () => {
     const result = await check({ root: fixture, config: { include: ['src/**/*.{ts,vue}'] } });
-    expect(result.stats.filesScanned).toBe(6);
+    expect(result.stats.filesScanned).toBe(7);
     expect(result.stats.filesByLayer).toMatchObject({ domain: 2, presentation: 1 });
     expect(result.stats.importsScanned).toBeGreaterThan(5);
   });
@@ -171,6 +171,37 @@ describe('checkFile', () => {
   it('prefers the most specific glob over declaration order', () => {
     // `**/*.vue` belongs to presentation, but an explicit domain glob wins.
     expect(checker.explain('src/domain/Weird.vue').layer).toBe('domain');
+  });
+});
+
+describe('composition layer', () => {
+  const checker = createChecker(resolveConfig({}, { root: fixture }));
+
+  it('owns the router and the app entry', () => {
+    expect(checker.explain('src/router/index.ts').layer).toBe('composition');
+    expect(checker.explain('src/main.ts').layer).toBe('composition');
+  });
+
+  it('may import every layer, including lazy-loaded views', () => {
+    const code = [
+      "import { useCart } from '@/stores/cart';",
+      "import { fetchCart } from '@/api/cart';",
+      "const Cart = () => import('@/components/CartView.vue');",
+    ].join('\n');
+    expect(checker.checkFile('src/router/index.ts', code)).toEqual([]);
+  });
+
+  it('may not be imported back, with a useRouter hint', () => {
+    const [violation] = checker.checkFile(
+      'src/api/http.ts',
+      "import router from '@/router/index.ts';",
+    );
+    expect(violation).toMatchObject({ fromLayer: 'infrastructure', toLayer: 'composition' });
+    expect(violation?.hint).toContain('useRouter');
+  });
+
+  it('recognises a singular src/store directory as application', () => {
+    expect(checker.explain('src/store/useAppStore.ts').layer).toBe('application');
   });
 });
 
