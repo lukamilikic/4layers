@@ -190,6 +190,8 @@ export interface CheckResult {
     importsScanned: number;
     filesByLayer: Record<string, number>;
     durationMs: number;
+    /** Imports (internal and external) made by the files of each layer. */
+    importsByLayer: Record<string, number>;
   };
   config: ResolvedConfig;
 }

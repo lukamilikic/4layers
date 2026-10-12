@@ -17,6 +17,7 @@ import path from 'node:path';
 import { createChecker } from './checker.js';
 import { loadConfig, resolveConfig } from './config.js';
 import { format, formatLayerTable, paint, paintLayer, type ReportFormat } from './report.js';
+import { defaultStyle } from './style.js';
 import type { FourLayersUserConfig, PresetName } from './types.js';
 
 const require_ = createRequire(import.meta.url);
@@ -160,18 +161,25 @@ async function commandCheck(args: Args): Promise<number> {
   const isMachine = formatName === 'json' || formatName === 'github';
 
   if (!isMachine && !quiet) {
-    const source = configFile
-      ? path.relative(process.cwd(), configFile) || path.basename(configFile)
-      : `no config file, using the "${config.extends}" preset`;
-    process.stdout.write(`${paint.gray(`4layers ${version()} · ${source}`)}\n\n`);
+    // `4layers 0.1.1 · classic preset`, plus the config file when there is one.
+    const parts = [`${config.extends} preset`];
+    if (configFile) {
+      parts.push(path.relative(process.cwd(), configFile) || path.basename(configFile));
+    }
+    const style = defaultStyle();
+    process.stdout.write(
+      `${style.bold('4layers')} ${style.color('dim')(`${version()} · ${parts.join(' · ')}`)}\n\n`,
+    );
+  }
+
+  // The table goes first, so the violations and the summary stay at the bottom.
+  if (args.flags.stats === true && !isMachine) {
+    process.stdout.write(formatLayerTable(result) + '\n\n');
   }
 
   const output = quiet && !isMachine ? '' : format(result, formatName);
   if (output) process.stdout.write(output + '\n');
 
-  if (args.flags.stats === true && !isMachine) {
-    process.stdout.write('\n' + formatLayerTable(result) + '\n');
-  }
   if (quiet && !isMachine) {
     process.stdout.write(
       `${result.errorCount} error(s), ${result.warningCount} warning(s)\n`,

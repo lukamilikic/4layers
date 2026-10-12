@@ -1,0 +1,6 @@
+src/api/cart.ts:4:1: error: infrastructure may not import application ("@/stores/cart" resolves to src/stores/cart.ts). (layer-dependency)
+src/components/CartView.vue:13:1: error: presentation may not import infrastructure ("@/api/cart" resolves to src/api/cart.ts). (layer-dependency)
+src/components/CartView.vue:15:1: error: The presentation layer may not import "axios". (package-boundary)
+src/domain/order.ts:2:1: error: The domain layer may not import "vue". (package-boundary)
+src/domain/order.ts:3:1: error: domain may not import infrastructure ("@/api/cart" resolves to src/api/cart.ts). (layer-dependency)
+5 errors · 7 files, 13 imports in 0ms

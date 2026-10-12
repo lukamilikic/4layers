@@ -1,6 +1,6 @@
 {
   "name": "4layers",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Architecture layer checker for Vue.js / TypeScript apps. Enforces Presentation -> Application -> Domain <- Infrastructure boundaries at dev time, build time and in CI.",
   "keywords": [
     "architecture",

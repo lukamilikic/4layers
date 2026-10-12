@@ -47,6 +47,17 @@ export {
   paintLayer,
   type ReportFormat,
 } from './report.js';
+export { BAR_CELLS, barCells, groupViolations, type ViolationGroup } from './report.js';
+export {
+  createStyle,
+  defaultStyle,
+  detectStyle,
+  isUtf8Locale,
+  PLAIN_STYLE,
+  type Style,
+  type StyleOptions,
+  type Symbols,
+} from './style.js';
 export { createResolver, parsePackageSpecifier, type Resolver, type ResolverOptions } from './resolver.js';
 export {
   collectDirectives,
