@@ -1,0 +1,86 @@
+{
+  "name": "4layers",
+  "version": "0.1.0",
+  "description": "Architecture layer checker for Vue.js / TypeScript apps. Enforces Presentation -> Application -> Domain <- Infrastructure boundaries at dev time, build time and in CI.",
+  "keywords": [
+    "architecture",
+    "clean-architecture",
+    "layers",
+    "boundaries",
+    "dependency-rules",
+    "vue",
+    "vite",
+    "vite-plugin",
+    "lint",
+    "static-analysis",
+    "ddd",
+    "hexagonal"
+  ],
+  "license": "MIT",
+  "author": "Luka Milikic",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lmilikich/4layers.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lmilikich/4layers/issues"
+  },
+  "homepage": "https://github.com/lmilikich/4layers#readme",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.18"
+  },
+  "bin": {
+    "4layers": "dist/cli.js"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js",
+      "require": "./dist/vite.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run test",
+    "release": "npm version"
+  },
+  "peerDependencies": {
+    "vite": "^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
+  }
+}

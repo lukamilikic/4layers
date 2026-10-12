@@ -1,0 +1,4 @@
+{
+  "extends": "classic",
+  "include": ["src/**/*.{ts,vue}"]
+}
