@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-13
+
+### Fixed
+
+- Installing next to Vite 8 failed with `ERESOLVE`: the optional `vite` peer
+  range stopped at Vite 7. It now includes `^8.0.0`. The plugin needed no code
+  changes; its tests pass on Vite 4, 5, 6, 7 and 8.
+
+### Added
+
+- CI runs the Vite plugin tests against every supported Vite major (4 to 8).
+
 ## [0.1.1] - 2026-10-12
 
 ### Changed
