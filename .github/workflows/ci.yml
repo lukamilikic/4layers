@@ -33,3 +33,22 @@ jobs:
           set -e
           # The fixture is built to contain violations: expect exit code 1.
           test "$code" -eq 1
+
+  vite-compat:
+    # Every Vite major listed in peerDependencies must pass the plugin tests,
+    # including the real builds. Vite 7+ needs Node 20.19+, so this runs on 22.
+    name: Vite ${{ matrix.vite }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        vite: [4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save vite@${{ matrix.vite }}
+      - run: npx vitest run test/vite.test.ts
